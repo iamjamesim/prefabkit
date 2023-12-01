@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "FF83B4CA-ED6D-4F21-ABD9-971A81B0930D",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "PrefabAppCoreTests",
+        "name" : "PrefabAppCoreTests"
+      }
+    }
+  ],
+  "version" : 1
+}

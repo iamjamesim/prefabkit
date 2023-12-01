@@ -1,0 +1,197 @@
+import Combine
+import Foundation
+import PrefabAppCoreInterface
+
+final class AppModel: AppModelProtocol {
+    /// A side effect to perform after merging API response objects.
+    private struct MergeSideEffect<ResponseObject, TargetObject> {
+        /// A closure to perform on the target objects.
+        let body: (
+            CurrentValueSubject<ResponseObject, Never>,
+            [CurrentValueSubject<TargetObject, Never>]
+        ) throws -> Void
+    }
+
+    private let objectStore: AppObjectStore
+
+    /// Creates a new `AppModel` instance.
+    /// - Parameter objectStore: An object store to use for storing and retrieving app objects.
+    init(objectStore: AppObjectStore) {
+        self.objectStore = objectStore
+    }
+
+    @discardableResult
+    func upsertProfile(inResponse response: APIResponse<UserProfileDTO>) throws -> UserProfileSubject {
+        try mergeObjects(inResponse: response)
+    }
+
+    @discardableResult
+    func upsertPageContent(inResponse response: APIResponse<PageContentDTO>) throws -> PageContentSubject {
+        try mergeObjects(inResponse: response)
+    }
+
+    func addItem(inResponse response: APIResponse<ItemDTO>) throws {
+        let appItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { newItem, targetObjects in
+            for pageContent in targetObjects {
+                var shouldAddNewItem: Bool
+                switch pageContent.value.query {
+                case .allItems:
+                    shouldAddNewItem = true
+                case .creatorItems:
+                    shouldAddNewItem = (newItem.value.creator?.id == pageContent.value.pageContext.objectID)
+                case .collections,
+                     .likes,
+                     .saves,
+                     .unknown:
+                    shouldAddNewItem = false
+                }
+                if shouldAddNewItem {
+                    guard let firstCollection = pageContent.value.collections.first else {
+                        throw AppModelError.pageDefaultCollectionNotFound
+                    }
+                    firstCollection.value.items.insert(newItem, at: 0)
+                }
+            }
+        })
+        try mergeObjects(
+            inResponse: response,
+            sideEffect: appItemInsertEffect
+        )
+    }
+
+    func removeItem(itemID: String) throws {
+        try objectStore.performWithinTransaction { objectStoreProxy in
+            try objectStoreProxy.performObjectUpdates { (pageContents: [CurrentValueSubject<PageContent, Never>]) in
+                // Remove item from all collections.
+                for collection in pageContents.flatMap({ $0.value.collections }) {
+                    collection.value.items.removeAll(where: { $0.id == itemID })
+                }
+            }
+        }
+    }
+
+    func addCollection(inResponse response: APIResponse<ItemCollectionDTO>) throws {
+        let collectionInsertEffect = MergeSideEffect<ItemCollection, PageContent>(body: { newCollection, targetObjects in
+            targetObjects.first { pageContent in
+                pageContent.value.query == .collections
+            }?.value.collections.append(newCollection)
+        })
+        try mergeObjects(
+            inResponse: response,
+            sideEffect: collectionInsertEffect
+        )
+    }
+
+    func removeCollection(collectionID: String) throws {
+        try objectStore.performWithinTransaction { objectStoreProxy in
+            try objectStoreProxy.performObjectUpdates { (pageContents: [CurrentValueSubject<PageContent, Never>]) in
+                // Remove collection from all pages.
+                for pageContent in pageContents {
+                    pageContent.value.collections.removeAll(where: { $0.id == collectionID })
+                }
+            }
+        }
+    }
+
+    func addCollectionItem(inResponse response: APIResponse<ItemDTO>, collectionID: String) throws {
+        let collectionItemInsertEffect = MergeSideEffect<Item, ItemCollection>(body: { newItem, targetObjects in
+            targetObjects.first { collection in
+                collection.id == collectionID
+            }?.value.items.append(newItem)
+        })
+        try mergeObjects(
+            inResponse: response,
+            sideEffect: collectionItemInsertEffect
+        )
+    }
+
+    func addLikedItem(inResponse response: APIResponse<ItemDTO>) throws {
+        let likedItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { likedItem, targetObjects in
+            targetObjects.first { pageContent in
+                pageContent.value.query == .likes &&
+                (pageContent.value.pageContext.objectID == nil ||
+                 pageContent.value.pageContext.objectID == likedItem.value.creator?.id)
+            }?.value.collections.first?.value.items.insert(likedItem, at: 0)
+        })
+        try mergeObjects(
+            inResponse: response,
+            sideEffect: likedItemInsertEffect
+        )
+    }
+
+    func removeUnlikedItem(inResponse response: APIResponse<ItemDTO>) throws {
+        let unlikedItemRemoveEffect = MergeSideEffect<Item, PageContent>(body: { unlikedItem, targetObjects in
+            targetObjects.first { pageContent in
+                pageContent.value.query == .likes &&
+                (pageContent.value.pageContext.objectID == nil ||
+                 pageContent.value.pageContext.objectID == unlikedItem.value.creator?.id)
+            }?.value.collections.first?.value.items.removeAll(where: { $0.id == unlikedItem.id })
+        })
+        try mergeObjects(
+            inResponse: response,
+            sideEffect: unlikedItemRemoveEffect
+        )
+    }
+
+    func addSavedItem(inResponse response: APIResponse<ItemDTO>) throws {
+        let savedItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { savedItem, targetObjects in
+            targetObjects.first { pageContent in
+                pageContent.value.query == .saves &&
+                (pageContent.value.pageContext.objectID == nil ||
+                 pageContent.value.pageContext.objectID == savedItem.value.creator?.id)
+            }?.value.collections.first?.value.items.insert(savedItem, at: 0)
+        })
+        try mergeObjects(
+            inResponse: response,
+            sideEffect: savedItemInsertEffect
+        )
+    }
+
+    func removeUnsavedItem(inResponse response: APIResponse<ItemDTO>) throws {
+        let unsavedItemRemoveEffect = MergeSideEffect<Item, PageContent>(body: { unsavedItem, targetObjects in
+            targetObjects.first { pageContent in
+                pageContent.value.query == .saves &&
+                (pageContent.value.pageContext.objectID == nil ||
+                 pageContent.value.pageContext.objectID == unsavedItem.value.creator?.id)
+            }?.value.collections.first?.value.items.removeAll(where: { $0.id == unsavedItem.id })
+        })
+        try mergeObjects(
+            inResponse: response,
+            sideEffect: unsavedItemRemoveEffect
+        )
+    }
+
+    /// Merges objects in the API response to the store, and then returns app objects that correspond to the main data objects in the API response.
+    @discardableResult
+    private func mergeObjects<T: AppObject, U: AppObject>(
+        inResponse response: APIResponse<T.DTO>,
+        sideEffect: AppModel.MergeSideEffect<T, U>?
+    ) throws -> CurrentValueSubject<T, Never> {
+        try objectStore.performWithinTransaction { objectStoreProxy in
+            // 1. Process data and included objects.
+            let responseProcessor = APIResponseProcessor<T>(response: response, objectStoreProxy: objectStoreProxy)
+            let responseObject = try responseProcessor.dataObject()
+
+            // 2. Perform any side effect.
+            if let sideEffect {
+                try objectStoreProxy.performObjectUpdates { targetObjects in
+                    try sideEffect.body(responseObject, targetObjects)
+                }
+            }
+
+            return responseObject
+        }
+    }
+
+    /// Merges objects in the API response to the store, and then returns app objects that correspond to the main data objects in the API response.
+    @discardableResult
+    private func mergeObjects<T: AppObject>(
+        inResponse response: APIResponse<T.DTO>
+    ) throws -> CurrentValueSubject<T, Never> {
+        try mergeObjects(inResponse: response, sideEffect: nil as AppModel.MergeSideEffect<T, T>?)
+    }
+}
+
+enum AppModelError: Error {
+    case pageDefaultCollectionNotFound
+}
