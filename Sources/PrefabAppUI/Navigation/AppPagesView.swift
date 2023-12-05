@@ -59,6 +59,7 @@ public struct AppPagesView: View {
                 )
             }
         }
+        .background(AppColor.background.color)
         .environmentObject(EnvironmentValueContainer(value: analytics))
         .environmentObject(EnvironmentValueContainer(value: appService))
         .environmentObject(EnvironmentValueContainer(value: iconAssetBundle))
