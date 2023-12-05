@@ -10,21 +10,22 @@ struct ItemForm: View {
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
-                ForEach(viewModel.fieldViewModels, id: \.field.name) { viewModel in
-                    if let viewModel = viewModel as? ItemFormTextFieldViewModel {
-                        ItemFormTextField(
-                            viewModel: viewModel,
-                            focused: $focused
-                        )
-                    } else if let viewModel = viewModel as? ItemFormImagePickerViewModel {
-                        ItemFormImagePicker(viewModel: viewModel)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    ForEach(viewModel.fieldViewModels, id: \.field.name) { viewModel in
+                        if let viewModel = viewModel as? ItemFormTextFieldViewModel {
+                            ItemFormTextField(
+                                viewModel: viewModel,
+                                focused: $focused
+                            )
+                        } else if let viewModel = viewModel as? ItemFormImagePickerViewModel {
+                            ItemFormImagePicker(viewModel: viewModel)
+                        }
                     }
                 }
-                Spacer()
+                .padding(16)
+                .disabled(submissionState.isSubmitting)
             }
-            .padding(16)
-            .disabled(submissionState.isSubmitting)
             .onAppear {
                 focused = viewModel.fieldViewModels.first {
                     $0.field.contentType == .text || $0.field.contentType == .url
