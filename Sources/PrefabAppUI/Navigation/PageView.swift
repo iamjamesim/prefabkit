@@ -23,6 +23,7 @@ struct PageView: View {
                 UnknownPageTypeView()
             }
         }
+        .background(AppColor.background.color)
         .environmentObject(EnvironmentValueContainer(value: pageContext))
     }
 }
