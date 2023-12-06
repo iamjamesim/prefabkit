@@ -214,10 +214,23 @@ final class AppModelTests: XCTestCase {
         let store = AppObjectStore()
         let model = AppModel(objectStore: store)
 
+        // Add profile page.
+        let profilePageContentDTO = PageContentDTO(
+            query: .creatorItems,
+            pageId: "1",
+            objectId: "1",
+            collectionIds: ["1"]
+        )
+        let profilePageContentSubject = try model.upsertPageContent(
+            inResponse: APIResponse(
+                data: profilePageContentDTO,
+                included: [AnyAppObjectDTO(dto: ItemCollectionDTO(id: "1", name: nil, layout: .verticalList, itemIds: []))]
+            )
+        )
         // Add collections page.
         let pageContentDTO = PageContentDTO(
             query: .collections,
-            pageId: "1",
+            pageId: "2",
             objectId: nil,
             collectionIds: []
         )
@@ -240,6 +253,7 @@ final class AppModelTests: XCTestCase {
             collectionID: "1"
         )
 
+        XCTAssertEqual(profilePageContentSubject.value.collections.first?.value.items.first?.id, TestData.itemDTO.id)
         XCTAssertEqual(pageContentSubject.value.collections.first?.value.items.first?.id, TestData.itemDTO.id)
     }
 

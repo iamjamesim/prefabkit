@@ -7,7 +7,7 @@ public struct PageSpec: Identifiable, Codable {
     /// A page type.
     public let pageType: PageType
     /// An object ID if the page belongs to an object (e.g. a user profile ID).
-    public let objectID: String?
+    public let objectId: String?
     /// A page title.
     public let title: String
     /// A page icon.

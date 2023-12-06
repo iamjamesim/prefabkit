@@ -29,7 +29,7 @@ struct TabRootView: View {
         NavigationStack(path: $pageRouter.navigationStack) {
             PageView(
                 pageType: pageSpec.pageType,
-                pageContext: PageContext(pageID: pageSpec.id, objectID: pageSpec.objectID),
+                pageContext: PageContext(pageID: pageSpec.id, objectID: pageSpec.objectId),
                 subpages: pageSpec.subpages
             )
             .environmentObject(pageRouter)

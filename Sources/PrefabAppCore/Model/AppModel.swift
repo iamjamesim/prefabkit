@@ -33,19 +33,8 @@ final class AppModel: AppModelProtocol {
     func addItem(inResponse response: APIResponse<ItemDTO>) throws {
         let appItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { newItem, targetObjects in
             for pageContent in targetObjects {
-                var shouldAddNewItem: Bool
-                switch pageContent.value.query {
-                case .allItems:
-                    shouldAddNewItem = true
-                case .creatorItems:
-                    shouldAddNewItem = (newItem.value.creator?.id == pageContent.value.pageContext.objectID)
-                case .collections,
-                     .likes,
-                     .saves,
-                     .unknown:
-                    shouldAddNewItem = false
-                }
-                if shouldAddNewItem {
+                if pageContent.value.query == .allItems ||
+                    Self.isCreatorItem(pageContent: pageContent.value, item: newItem.value) {
                     guard let firstCollection = pageContent.value.collections.first else {
                         throw AppModelError.pageDefaultCollectionNotFound
                     }
@@ -94,10 +83,19 @@ final class AppModel: AppModelProtocol {
     }
 
     func addCollectionItem(inResponse response: APIResponse<ItemDTO>, collectionID: String) throws {
-        let collectionItemInsertEffect = MergeSideEffect<Item, ItemCollection>(body: { newItem, targetObjects in
-            targetObjects.first { collection in
-                collection.id == collectionID
-            }?.value.items.append(newItem)
+        let collectionItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { newItem, targetObjects in
+            for pageContent in targetObjects {
+                if pageContent.value.query == .collections {
+                    pageContent.value.collections.first { collection in
+                        collection.id == collectionID
+                    }?.value.items.append(newItem)
+                } else if Self.isCreatorItem(pageContent: pageContent.value, item: newItem.value) {
+                    guard let firstCollection = pageContent.value.collections.first else {
+                        throw AppModelError.pageDefaultCollectionNotFound
+                    }
+                    firstCollection.value.items.insert(newItem, at: 0)
+                }
+            }
         })
         try mergeObjects(
             inResponse: response,
@@ -189,6 +187,10 @@ final class AppModel: AppModelProtocol {
         inResponse response: APIResponse<T.DTO>
     ) throws -> CurrentValueSubject<T, Never> {
         try mergeObjects(inResponse: response, sideEffect: nil as AppModel.MergeSideEffect<T, T>?)
+    }
+
+    private static func isCreatorItem(pageContent: PageContent, item: Item) -> Bool {
+        pageContent.query == .creatorItems && item.creator?.id == pageContent.pageContext.objectID
     }
 }
 
