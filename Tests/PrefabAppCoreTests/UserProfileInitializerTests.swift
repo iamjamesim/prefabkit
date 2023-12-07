@@ -36,7 +36,7 @@ final class UserProfileInitializerTests: XCTestCase {
         do {
             _ = try await userProfileInitializer.currentUserProfile()
             XCTFail("Expected an error to be thrown.")
-        } catch UserProfileServiceError.profileNotFound {
+        } catch UserProfileInitializerError.profileNotFound {
         } catch {
             XCTFail("Unexpected error thrown: \(error)")
         }

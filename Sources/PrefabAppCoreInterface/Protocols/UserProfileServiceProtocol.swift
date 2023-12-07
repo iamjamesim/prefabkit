@@ -17,9 +17,3 @@ public protocol UserProfileServiceProtocol {
     ///   - image: An avatar image.
     func updateAvatar(userID: String, image: UIImage) async throws
 }
-
-/// An error that can be thrown by `UserProfileServiceProtocol`.
-public enum UserProfileServiceError: Error {
-    /// The requested user profile was not found.
-    case profileNotFound
-}

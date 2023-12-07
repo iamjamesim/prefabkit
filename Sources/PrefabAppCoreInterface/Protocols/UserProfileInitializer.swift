@@ -14,3 +14,9 @@ public protocol UserProfileInitializerProtocol {
     /// - Returns: A `UserProfileSubject` containing the created user profile.
     func createUserProfile(username: String, displayName: String) async throws -> UserProfile
 }
+
+/// An error that can be thrown by `UserProfileInitializerProtocol`.
+public enum UserProfileInitializerError: Error {
+    /// The requested user profile was not found.
+    case profileNotFound
+}

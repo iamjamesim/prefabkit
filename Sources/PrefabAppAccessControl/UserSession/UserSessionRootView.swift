@@ -59,7 +59,7 @@ struct UserSessionRootView<UserSession, Content: View>: View {
             let userProfile = try await userProfileInitializer.currentUserProfile()
             let userSession = try await userSessionInitializer(userProfile)
             userSessionState = .active(userSession)
-        } catch UserProfileServiceError.profileNotFound {
+        } catch UserProfileInitializerError.profileNotFound {
             userSessionState = .userProfileCreate
         } catch {
             analytics.value.logError(error)

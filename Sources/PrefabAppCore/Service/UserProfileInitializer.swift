@@ -19,7 +19,7 @@ class UserProfileInitializer: UserProfileInitializerProtocol {
         if let dto = response.data {
             return UserProfile(dto: dto)
         } else {
-            throw UserProfileServiceError.profileNotFound
+            throw UserProfileInitializerError.profileNotFound
         }
     }
 
