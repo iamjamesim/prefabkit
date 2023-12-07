@@ -7,7 +7,7 @@ import PrefabAppCoreInterface
 final class AppModelTests: XCTestCase {
     func testUpsertProfile() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         let profileDTO = UserProfileDTO(
             id: "1",
@@ -25,7 +25,7 @@ final class AppModelTests: XCTestCase {
 
     func testUpsertPageContent() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         let pageContentDTO = PageContentDTO(
             query: .allItems,
@@ -41,7 +41,7 @@ final class AppModelTests: XCTestCase {
 
     func testAddItem() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         // Add content feed page.
         let contentFeedPageContentDTO = PageContentDTO(
@@ -101,7 +101,7 @@ final class AppModelTests: XCTestCase {
 
     func testAddItem_pageDefaultCollectionNotFound() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         // Add content feed page.
         let contentFeedPageContentDTO = PageContentDTO(
@@ -131,7 +131,7 @@ final class AppModelTests: XCTestCase {
 
     func testRemoveItem() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         // Add page with item.
         let pageContentDTO = PageContentDTO(
@@ -159,7 +159,7 @@ final class AppModelTests: XCTestCase {
     }
 
     func testAddCollection() throws {let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         // Add collections page.
         let pageContentDTO = PageContentDTO(
@@ -183,7 +183,7 @@ final class AppModelTests: XCTestCase {
 
     func testRemoveCollection() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         // Add page with collection.
         let pageContentDTO = PageContentDTO(
@@ -212,7 +212,7 @@ final class AppModelTests: XCTestCase {
 
     func testAddCollectionItem() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         // Add profile page.
         let profilePageContentDTO = PageContentDTO(
@@ -259,7 +259,7 @@ final class AppModelTests: XCTestCase {
 
     func testAddLikedItem() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         // Add likes pages.
         let likesPageContentSubject = try model.upsertPageContent(
@@ -296,7 +296,7 @@ final class AppModelTests: XCTestCase {
 
     func testRemoveLikedItem() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         // Add likes pages.
         let likesPageContentSubject = try model.upsertPageContent(
@@ -341,7 +341,7 @@ final class AppModelTests: XCTestCase {
 
     func testAddSavedItem() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         // Add saves pages.
         let savesPageContentSubject = try model.upsertPageContent(
@@ -378,7 +378,7 @@ final class AppModelTests: XCTestCase {
 
     func testRemoveSavedItem() throws {
         let store = AppObjectStore()
-        let model = AppModel(objectStore: store)
+        let model = AppModel(objectStore: store, currentUserID: "1")
 
         // Add saves pages.
         let savesPageContentSubject = try model.upsertPageContent(

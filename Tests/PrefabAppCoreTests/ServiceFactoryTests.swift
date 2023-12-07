@@ -15,14 +15,25 @@ final class ServiceFactoryTests: XCTestCase {
     }
 
     func testThatServicesShareAppModel() async throws {
-        let appService = ServiceFactory.appService(appID: "123", apiClient: apiClient)
-        let userProfileService = ServiceFactory.userProfileService(apiClient: apiClient)
+        let (userSession, services) = try await PrefabAppCoreFactory.sessionScopedServices(
+            appID: TestData.profileDTO.id,
+            currentUserProfile: TestData.profileSubject.value,
+            apiClient: apiClient
+        )
 
         apiClient.performRV = APIResponse(
-            data: TestData.profileDTO as UserProfileDTO?,
+            data: UserProfileDTO(
+                id: TestData.profileDTO.id,
+                username: TestData.profileDTO.username,
+                displayName: "New Name 1",
+                avatarUrl: nil,
+                bio: nil,
+                insertedAt: Date()
+            ),
             included: nil
         )
-        let userProfile = try await userProfileService.currentUserProfile()
+        _ = try await services.userProfileService.updateDisplayName("New Name 1")
+        XCTAssertEqual(userSession.userProfileSubject.value.displayName, "New Name 1")
 
         apiClient.performRV = APIResponse(
             data: TestData.itemDTO,
@@ -30,15 +41,14 @@ final class ServiceFactoryTests: XCTestCase {
                 AnyAppObjectDTO(dto: UserProfileDTO(
                     id: TestData.profileDTO.id,
                     username: TestData.profileDTO.username,
-                    displayName: "New Displayname",
+                    displayName: "New Name 2",
                     avatarUrl: nil,
                     bio: nil,
                     insertedAt: TestData.profileDTO.insertedAt
                 ))
             ]
         )
-        _ = try await appService.saveItem(itemID: TestData.itemDTO.id)
-
-        XCTAssertEqual(userProfile.value.displayName, "New Displayname")
+        _ = try await services.appService.saveItem(itemID: TestData.itemDTO.id)
+        XCTAssertEqual(userSession.userProfileSubject.value.displayName, "New Name 2")
     }
 }

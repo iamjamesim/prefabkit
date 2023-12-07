@@ -13,11 +13,21 @@ final class AppModel: AppModelProtocol {
     }
 
     private let objectStore: AppObjectStore
+    private let currentUserID: String
 
     /// Creates a new `AppModel` instance.
-    /// - Parameter objectStore: An object store to use for storing and retrieving app objects.
-    init(objectStore: AppObjectStore) {
+    /// - Parameters:
+    ///   objectStore: An object store to use for storing and retrieving app objects.
+    ///   currentUserID: The ID of the current user whose session is active.
+    init(objectStore: AppObjectStore, currentUserID: String) {
         self.objectStore = objectStore
+        self.currentUserID = currentUserID
+    }
+
+    func insertProfile(userProfile: UserProfile) async throws -> UserProfileSubject {
+        try await objectStore.performWithinTransactionAsync { proxy in
+            proxy.mergeValue(id: userProfile.id, newValue: userProfile)
+        }
     }
 
     @discardableResult

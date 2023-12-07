@@ -22,45 +22,6 @@ final class UserProfileServiceTests: XCTestCase {
         super.tearDown()
     }
 
-    func testCurrentUserProfile() async throws {
-        apiClient.performRV = APIResponse(
-            data: TestData.profileDTO as UserProfileDTO?,
-            included: nil
-        )
-        appModel.upsertProfileRV = TestData.profileSubject
-        _ = try await userProfileService.currentUserProfile()
-        XCTAssertTrue(apiClient.performCalled)
-    }
-
-    func testCurrentUserProfile_nilResponse() async throws {
-        apiClient.performRV = APIResponse(
-            data: nil as UserProfileDTO?,
-            included: nil
-        )
-        do {
-            _ = try await userProfileService.currentUserProfile()
-            XCTFail("Expected an error to be thrown.")
-        } catch UserProfileServiceError.profileNotFound {
-        } catch {
-            XCTFail("Unexpected error thrown: \(error)")
-        }
-    }
-
-    func testCreateUserProfile() async throws {
-        apiClient.performRV = APIResponse(
-            data: TestData.profileDTO,
-            included: nil
-        )
-        appModel.upsertProfileRV = TestData.profileSubject
-        _ = try await userProfileService.createUserProfile(
-            username: TestData.profileDTO.username,
-            displayName: TestData.profileDTO.displayName
-        )
-        XCTAssertTrue(apiClient.performCalled)
-        XCTAssertEqual(apiClient.performParams?.0, APIOperation.userProfileCreate)
-        XCTAssertTrue(appModel.upsertProfileCalled)
-    }
-
     func testUpdateUsername() async throws {
         apiClient.performRV = APIResponse(
             data: TestData.profileDTO,

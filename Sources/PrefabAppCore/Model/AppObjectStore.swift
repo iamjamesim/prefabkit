@@ -60,4 +60,19 @@ final class AppObjectStore {
             try body(StoreProxy(store: self))
         }
     }
+
+    /// Performs a store operation within a transaction.
+    /// - Parameter body: The operation to perform.
+    /// - Returns: The result of the operation.
+    func performWithinTransactionAsync<T>(_ body: @escaping (StoreProxy) throws -> T) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    continuation.resume(returning: try body(StoreProxy(store: self)))
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
 }

@@ -7,7 +7,7 @@ import SwiftUI
 /// When this view first appears, it attempts to load the authenticated user's profile. If a profile is not found, the
 /// new user profile creation flow is shown. If a profile is found, a new session is activated, and the main app
 /// experience is shown.
-struct UserSessionRootView<Content: View>: View {
+struct UserSessionRootView<UserSession, Content: View>: View {
     private enum UserSessionState {
         case loading
         case loadingError
@@ -16,10 +16,13 @@ struct UserSessionRootView<Content: View>: View {
     }
 
     @EnvironmentObject private var analytics: EnvironmentValueContainer<AnalyticsProtocol>
-    @EnvironmentObject private var userProfileService: EnvironmentValueContainer<UserProfileServiceProtocol>
 
     @State private var userSessionState: UserSessionState = .loading
 
+    /// A `UserProfileInitializerProtocol` instance.
+    let userProfileInitializer: UserProfileInitializerProtocol
+    /// A closure that initializes a new user session with a user profile.
+    let userSessionInitializer: (UserProfile) async throws -> UserSession
     let content: (UserSession) -> Content
 
     var body: some View {
@@ -35,11 +38,14 @@ struct UserSessionRootView<Content: View>: View {
                     }
                 }
             case .userProfileCreate:
-                UserProfileCreateFlow { newProfile in
-                    userSessionState = .active(UserSession(userProfileSubject: newProfile))
+                UserProfileCreateFlow(
+                    userProfileInitializer: userProfileInitializer,
+                    userSessionInitializer: userSessionInitializer
+                ) { userSession in
+                    userSessionState = .active(userSession)
                 }
-            case let .active(userSession):
-                content(userSession)
+            case let .active(userProfile):
+                content(userProfile)
             }
         }.task {
             await load()
@@ -50,8 +56,9 @@ struct UserSessionRootView<Content: View>: View {
     private func load() async {
         userSessionState = .loading
         do {
-            let userProfileSubject = try await userProfileService.value.currentUserProfile()
-            userSessionState = .active(UserSession(userProfileSubject: userProfileSubject))
+            let userProfile = try await userProfileInitializer.currentUserProfile()
+            let userSession = try await userSessionInitializer(userProfile)
+            userSessionState = .active(userSession)
         } catch UserProfileServiceError.profileNotFound {
             userSessionState = .userProfileCreate
         } catch {

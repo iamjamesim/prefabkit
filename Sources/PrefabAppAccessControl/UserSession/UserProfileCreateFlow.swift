@@ -3,20 +3,22 @@ import PrefabAppUI
 import SwiftUI
 
 /// A view that contains the user profile creation flow.
-struct UserProfileCreateFlow: View {
+struct UserProfileCreateFlow<UserSession>: View {
     private enum NavigationDestination: Hashable {
         case nameInput
     }
-
-    @EnvironmentObject private var userProfileService: EnvironmentValueContainer<UserProfileServiceProtocol>
 
     @State private var navigationPath: [NavigationDestination] = []
 
     @State private var username: String = ""
     @State private var displayName: String = ""
 
+    /// A `UserProfileInitializerProtocol` instance.
+    let userProfileInitializer: UserProfileInitializerProtocol
+    /// A closure that initializes a new user session with a user profile.
+    let userSessionInitializer: (UserProfile) async throws -> UserSession
     /// A closure that is called when the user profile is created successfully.
-    let onProfileCreate: (UserProfileSubject) -> Void
+    let onProfileCreate: (UserSession) -> Void
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -41,14 +43,14 @@ struct UserProfileCreateFlow: View {
                         submitButtonTitle: String(localized: "Create", comment: "Button title"),
                         submit: {
                             // TODO: perform input validation before submitting
-                            try await userProfileService
-                                .value.createUserProfile(
-                                    username: username.trimmingCharacters(in: .whitespacesAndNewlines),
-                                    displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-                                )
+                            let userProfile = try await userProfileInitializer.createUserProfile(
+                                username: username.trimmingCharacters(in: .whitespacesAndNewlines),
+                                displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+                            )
+                            return try await userSessionInitializer(userProfile)
                         },
-                        onSuccess: { newProfile in
-                            onProfileCreate(newProfile)
+                        onSuccess: { userSession in
+                            onProfileCreate(userSession)
                         }
                     )
                     .navigationTitle("Create account")

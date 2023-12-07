@@ -6,6 +6,10 @@ extension UserProfile: AppObject {
     static let objectType: AppObjectType = .userProfile
 
     init(dto: UserProfileDTO, relatedObjectProvider: AppObjectProvider) throws {
+        self.init(dto: dto)
+    }
+
+    init(dto: UserProfileDTO) {
         self.init(
             id: dto.id,
             username: dto.username,
