@@ -117,8 +117,7 @@ final class AppModel: AppModelProtocol {
         let likedItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { likedItem, targetObjects in
             targetObjects.first { pageContent in
                 pageContent.value.query == .likes &&
-                (pageContent.value.pageContext.objectID == nil ||
-                 pageContent.value.pageContext.objectID == likedItem.value.creator?.id)
+                self.belongsToCurrentUser(pageContext: pageContent.value.pageContext)
             }?.value.collections.first?.value.items.insert(likedItem, at: 0)
         })
         try mergeObjects(
@@ -131,8 +130,7 @@ final class AppModel: AppModelProtocol {
         let unlikedItemRemoveEffect = MergeSideEffect<Item, PageContent>(body: { unlikedItem, targetObjects in
             targetObjects.first { pageContent in
                 pageContent.value.query == .likes &&
-                (pageContent.value.pageContext.objectID == nil ||
-                 pageContent.value.pageContext.objectID == unlikedItem.value.creator?.id)
+                self.belongsToCurrentUser(pageContext: pageContent.value.pageContext)
             }?.value.collections.first?.value.items.removeAll(where: { $0.id == unlikedItem.id })
         })
         try mergeObjects(
@@ -145,8 +143,7 @@ final class AppModel: AppModelProtocol {
         let savedItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { savedItem, targetObjects in
             targetObjects.first { pageContent in
                 pageContent.value.query == .saves &&
-                (pageContent.value.pageContext.objectID == nil ||
-                 pageContent.value.pageContext.objectID == savedItem.value.creator?.id)
+                self.belongsToCurrentUser(pageContext: pageContent.value.pageContext)
             }?.value.collections.first?.value.items.insert(savedItem, at: 0)
         })
         try mergeObjects(
@@ -159,14 +156,17 @@ final class AppModel: AppModelProtocol {
         let unsavedItemRemoveEffect = MergeSideEffect<Item, PageContent>(body: { unsavedItem, targetObjects in
             targetObjects.first { pageContent in
                 pageContent.value.query == .saves &&
-                (pageContent.value.pageContext.objectID == nil ||
-                 pageContent.value.pageContext.objectID == unsavedItem.value.creator?.id)
+                self.belongsToCurrentUser(pageContext: pageContent.value.pageContext)
             }?.value.collections.first?.value.items.removeAll(where: { $0.id == unsavedItem.id })
         })
         try mergeObjects(
             inResponse: response,
             sideEffect: unsavedItemRemoveEffect
         )
+    }
+
+    private func belongsToCurrentUser(pageContext: PageContext) -> Bool {
+        pageContext.objectID == nil || pageContext.objectID == currentUserID
     }
 
     /// Merges objects in the API response to the store, and then returns app objects that correspond to the main data objects in the API response.
