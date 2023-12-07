@@ -18,29 +18,6 @@ class UserProfileService: UserProfileServiceProtocol {
         self.appModel = appModel
     }
 
-    func currentUserProfile() async throws -> UserProfileSubject {
-        let response: APIResponse<UserProfileDTO?> = try await apiClient
-            .perform(operation: APIOperation.currentUserProfile)
-        if let data = response.data {
-            return try appModel.upsertProfile(inResponse: .init(data: data, included: response.included))
-        } else {
-            throw UserProfileServiceError.profileNotFound
-        }
-    }
-
-    func createUserProfile(username: String, displayName: String) async throws -> UserProfileSubject {
-        struct UserProfileCreateParams: Encodable {
-            let username: String
-            let displayName: String
-        }
-        let response: APIResponse<UserProfileDTO> = try await apiClient
-            .perform(
-                operation: APIOperation.userProfileCreate,
-                params: UserProfileCreateParams(username: username, displayName: displayName)
-            )
-        return try appModel.upsertProfile(inResponse: response)
-    }
-
     func updateUsername(_ username: String) async throws {
         struct UpdateUsernameParams: Encodable {
             let username: String

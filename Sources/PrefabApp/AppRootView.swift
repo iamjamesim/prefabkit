@@ -6,43 +6,44 @@ import SwiftUI
 /// The root view of a Prefab app.
 public struct AppRootView: View {
     private let analytics: AnalyticsProtocol
-    private let appService: AppServiceProtocol
     private let iconAssetBundle: Bundle
     private let authClient: AuthClientProtocol
-    private let userProfileService: UserProfileServiceProtocol
+    private let userProfileInitializer: UserProfileInitializerProtocol
+    private let userSessionInitializer: (UserProfile) async throws -> (UserSession, UserSessionScopedServices)
 
     /// Creates a new `AppRootView` instance with the provided dependencies.
     /// - Parameters:
     ///   - analytics: An `AnalyticsProtocol` instance.
-    ///   - appService: An `AppServiceProtocol` instance.
     ///   - iconAssetBundle: A bundle that contains icon assets.
     ///   - authClient: An `AuthClient` instance.
-    ///   - userProfileService: A `UserProfileServiceProtocol` instance.
+    ///   - userProfileInitializer: A `UserProfileInitializerProtocol` instance.
+    ///   - userSessionInitializer: A closure that initializes a user session and session scoped services.
     public init(
         analytics: AnalyticsProtocol,
-        appService: AppServiceProtocol,
         iconAssetBundle: Bundle,
         authClient: AuthClientProtocol,
-        userProfileService: UserProfileServiceProtocol
+        userProfileInitializer: UserProfileInitializerProtocol,
+        userSessionInitializer: @escaping (UserProfile) async throws -> (UserSession, UserSessionScopedServices)
     ) {
         self.analytics = analytics
-        self.appService = appService
         self.iconAssetBundle = iconAssetBundle
         self.authClient = authClient
-        self.userProfileService = userProfileService
+        self.userProfileInitializer = userProfileInitializer
+        self.userSessionInitializer = userSessionInitializer
     }
 
     public var body: some View {
         AccessControlledView(
             analytics: analytics,
             authClient: authClient,
-            userProfileService: userProfileService
-        ) { userSession in
+            userProfileInitializer: userProfileInitializer,
+            userSessionInitializer: userSessionInitializer
+        ) { (userSession, services) in
             AppPagesView(
                 analytics: analytics,
-                appService: appService,
+                appService: services.appService,
                 iconAssetBundle: iconAssetBundle,
-                userProfileService: userProfileService,
+                userProfileService: services.userProfileService,
                 userSession: userSession
             )
         }

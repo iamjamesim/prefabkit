@@ -13,11 +13,21 @@ final class AppModel: AppModelProtocol {
     }
 
     private let objectStore: AppObjectStore
+    private let currentUserID: String
 
     /// Creates a new `AppModel` instance.
-    /// - Parameter objectStore: An object store to use for storing and retrieving app objects.
-    init(objectStore: AppObjectStore) {
+    /// - Parameters:
+    ///   objectStore: An object store to use for storing and retrieving app objects.
+    ///   currentUserID: The ID of the current user whose session is active.
+    init(objectStore: AppObjectStore, currentUserID: String) {
         self.objectStore = objectStore
+        self.currentUserID = currentUserID
+    }
+
+    func insertProfile(userProfile: UserProfile) async throws -> UserProfileSubject {
+        try await objectStore.performWithinTransactionAsync { proxy in
+            proxy.mergeValue(id: userProfile.id, newValue: userProfile)
+        }
     }
 
     @discardableResult
@@ -33,19 +43,8 @@ final class AppModel: AppModelProtocol {
     func addItem(inResponse response: APIResponse<ItemDTO>) throws {
         let appItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { newItem, targetObjects in
             for pageContent in targetObjects {
-                var shouldAddNewItem: Bool
-                switch pageContent.value.query {
-                case .allItems:
-                    shouldAddNewItem = true
-                case .creatorItems:
-                    shouldAddNewItem = (newItem.value.creator?.id == pageContent.value.pageContext.objectID)
-                case .collections,
-                     .likes,
-                     .saves,
-                     .unknown:
-                    shouldAddNewItem = false
-                }
-                if shouldAddNewItem {
+                if pageContent.value.query == .allItems ||
+                    Self.isCreatorItem(pageContent: pageContent.value, item: newItem.value) {
                     guard let firstCollection = pageContent.value.collections.first else {
                         throw AppModelError.pageDefaultCollectionNotFound
                     }
@@ -94,10 +93,19 @@ final class AppModel: AppModelProtocol {
     }
 
     func addCollectionItem(inResponse response: APIResponse<ItemDTO>, collectionID: String) throws {
-        let collectionItemInsertEffect = MergeSideEffect<Item, ItemCollection>(body: { newItem, targetObjects in
-            targetObjects.first { collection in
-                collection.id == collectionID
-            }?.value.items.append(newItem)
+        let collectionItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { newItem, targetObjects in
+            for pageContent in targetObjects {
+                if pageContent.value.query == .collections {
+                    pageContent.value.collections.first { collection in
+                        collection.id == collectionID
+                    }?.value.items.append(newItem)
+                } else if Self.isCreatorItem(pageContent: pageContent.value, item: newItem.value) {
+                    guard let firstCollection = pageContent.value.collections.first else {
+                        throw AppModelError.pageDefaultCollectionNotFound
+                    }
+                    firstCollection.value.items.insert(newItem, at: 0)
+                }
+            }
         })
         try mergeObjects(
             inResponse: response,
@@ -109,8 +117,7 @@ final class AppModel: AppModelProtocol {
         let likedItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { likedItem, targetObjects in
             targetObjects.first { pageContent in
                 pageContent.value.query == .likes &&
-                (pageContent.value.pageContext.objectID == nil ||
-                 pageContent.value.pageContext.objectID == likedItem.value.creator?.id)
+                self.belongsToCurrentUser(pageContext: pageContent.value.pageContext)
             }?.value.collections.first?.value.items.insert(likedItem, at: 0)
         })
         try mergeObjects(
@@ -123,8 +130,7 @@ final class AppModel: AppModelProtocol {
         let unlikedItemRemoveEffect = MergeSideEffect<Item, PageContent>(body: { unlikedItem, targetObjects in
             targetObjects.first { pageContent in
                 pageContent.value.query == .likes &&
-                (pageContent.value.pageContext.objectID == nil ||
-                 pageContent.value.pageContext.objectID == unlikedItem.value.creator?.id)
+                self.belongsToCurrentUser(pageContext: pageContent.value.pageContext)
             }?.value.collections.first?.value.items.removeAll(where: { $0.id == unlikedItem.id })
         })
         try mergeObjects(
@@ -137,8 +143,7 @@ final class AppModel: AppModelProtocol {
         let savedItemInsertEffect = MergeSideEffect<Item, PageContent>(body: { savedItem, targetObjects in
             targetObjects.first { pageContent in
                 pageContent.value.query == .saves &&
-                (pageContent.value.pageContext.objectID == nil ||
-                 pageContent.value.pageContext.objectID == savedItem.value.creator?.id)
+                self.belongsToCurrentUser(pageContext: pageContent.value.pageContext)
             }?.value.collections.first?.value.items.insert(savedItem, at: 0)
         })
         try mergeObjects(
@@ -151,14 +156,17 @@ final class AppModel: AppModelProtocol {
         let unsavedItemRemoveEffect = MergeSideEffect<Item, PageContent>(body: { unsavedItem, targetObjects in
             targetObjects.first { pageContent in
                 pageContent.value.query == .saves &&
-                (pageContent.value.pageContext.objectID == nil ||
-                 pageContent.value.pageContext.objectID == unsavedItem.value.creator?.id)
+                self.belongsToCurrentUser(pageContext: pageContent.value.pageContext)
             }?.value.collections.first?.value.items.removeAll(where: { $0.id == unsavedItem.id })
         })
         try mergeObjects(
             inResponse: response,
             sideEffect: unsavedItemRemoveEffect
         )
+    }
+
+    private func belongsToCurrentUser(pageContext: PageContext) -> Bool {
+        pageContext.objectID == nil || pageContext.objectID == currentUserID
     }
 
     /// Merges objects in the API response to the store, and then returns app objects that correspond to the main data objects in the API response.
@@ -189,6 +197,10 @@ final class AppModel: AppModelProtocol {
         inResponse response: APIResponse<T.DTO>
     ) throws -> CurrentValueSubject<T, Never> {
         try mergeObjects(inResponse: response, sideEffect: nil as AppModel.MergeSideEffect<T, T>?)
+    }
+
+    private static func isCreatorItem(pageContent: PageContent, item: Item) -> Bool {
+        pageContent.query == .creatorItems && item.creator?.id == pageContent.pageContext.objectID
     }
 }
 

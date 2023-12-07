@@ -1,8 +1,6 @@
 import Foundation
-import PrefabAppCoreInterface
 
 /// An object that represents an active user session.
-@MainActor
 public final class UserSession: ObservableObject {
     /// A user profile subject for the current user.
     public let userProfileSubject: UserProfileSubject
@@ -15,5 +13,15 @@ public final class UserSession: ObservableObject {
     /// - Parameter userProfileSubject: A user profile subject for the current user.
     public init(userProfileSubject: UserProfileSubject) {
         self.userProfileSubject = userProfileSubject
+    }
+}
+
+public struct UserSessionScopedServices {
+    public let appService: AppServiceProtocol
+    public let userProfileService: UserProfileServiceProtocol
+
+    public init(appService: AppServiceProtocol, userProfileService: UserProfileServiceProtocol) {
+        self.appService = appService
+        self.userProfileService = userProfileService
     }
 }
