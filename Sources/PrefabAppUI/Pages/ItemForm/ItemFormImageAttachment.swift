@@ -23,8 +23,12 @@ struct ItemFormImageAttachment: View {
                             .foregroundColor(AppColor.contentPrimary.color)
                     )
             case let .loaded(image):
-                Image(uiImage: image)
-                    .resizable()
+                GeometryReader { geometry in
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: geometry.size.width)
+                }
             }
         }
         .aspectRatio(1, contentMode: .fit)
