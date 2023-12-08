@@ -55,9 +55,10 @@ public struct AccessControlledView<UserSession, Content: View>: View {
                     userSessionInitializer: userSessionInitializer,
                     content: content
                 )
-                .environmentObject(EnvironmentValueContainer(value: analytics))
             }
-        }.task {
+        }
+        .environmentObject(EnvironmentValueContainer(value: analytics))
+        .task {
             for await authEvent in authClient.eventStream {
                 switch authEvent {
                 case .loggedIn:
