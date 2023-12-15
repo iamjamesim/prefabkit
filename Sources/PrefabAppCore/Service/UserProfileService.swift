@@ -18,26 +18,42 @@ class UserProfileService: UserProfileServiceProtocol {
         self.appModel = appModel
     }
 
+    func userProfile(userID: String) async throws -> UserProfileSubject {
+        struct Params: Encodable {
+            let userID: String
+        }
+        if let existingProfile = try await appModel.userProfile(userID: userID) {
+            return existingProfile
+        } else {
+            let response: APIResponse<UserProfileDTO> = try await apiClient
+                .perform(
+                    operation: APIOperation.userProfile,
+                    params: Params(userID: userID)
+                )
+            return try appModel.upsertProfile(inResponse: response)
+        }
+    }
+
     func updateUsername(_ username: String) async throws {
-        struct UpdateUsernameParams: Encodable {
+        struct Params: Encodable {
             let username: String
         }
         let response: APIResponse<UserProfileDTO> = try await apiClient
             .perform(
                 operation: APIOperation.userProfileUpdate,
-                params: UpdateUsernameParams(username: username)
+                params: Params(username: username)
             )
         try appModel.upsertProfile(inResponse: response)
     }
 
     func updateDisplayName(_ displayName: String) async throws {
-        struct UpdateDisplayNameParams: Encodable {
+        struct Params: Encodable {
             let displayName: String
         }
         let response: APIResponse<UserProfileDTO> = try await apiClient
             .perform(
                 operation: APIOperation.userProfileUpdate,
-                params: UpdateDisplayNameParams(displayName: displayName)
+                params: Params(displayName: displayName)
             )
         try appModel.upsertProfile(inResponse: response)
     }

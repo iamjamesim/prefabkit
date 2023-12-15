@@ -30,6 +30,12 @@ final class AppModel: AppModelProtocol {
         }
     }
 
+    func userProfile(userID: String) async throws -> UserProfileSubject? {
+        try await objectStore.performWithinTransactionAsync { proxy in
+            proxy.value(forID: userID)
+        }
+    }
+
     @discardableResult
     func upsertProfile(inResponse response: APIResponse<UserProfileDTO>) throws -> UserProfileSubject {
         try mergeObjects(inResponse: response)

@@ -4,6 +4,14 @@ import Foundation
 import PrefabAppCoreInterface
 
 final class MockAppModel: AppModelProtocol {
+    private(set) var userProfileCalled = false
+    var userProfileRV: UserProfileSubject?
+    @discardableResult
+    func userProfile(userID: String) throws -> UserProfileSubject? {
+        userProfileCalled = true
+        return userProfileRV
+    }
+
     private(set) var upsertProfileCalled = false
     var upsertProfileRV: UserProfileSubject?
     @discardableResult

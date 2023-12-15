@@ -4,6 +4,8 @@ import Foundation
 public enum APIOperation: String {
     /// Returns an app spec.
     case appSpec
+    /// Returns a user profile given a user ID.
+    case userProfile
     /// Returns the current user's profile.
     case currentUserProfile
     /// Creates a new profile for the current user.
