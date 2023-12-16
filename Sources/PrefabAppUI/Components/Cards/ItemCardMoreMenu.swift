@@ -10,26 +10,30 @@ struct ItemCardMoreMenu: View {
     @State private var isPresented: Bool = false
 
     var body: some View {
-        Button {
-            isPresented = true
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 16, weight: .medium))
-                .frame(width: 32, height: 32)
-        }
-        .confirmationDialog("Item Actions", isPresented: $isPresented, titleVisibility: .hidden, actions: {
-            ForEach(menuItems, id: \.action) { menuItem in
-                switch menuItem.action {
-                case .delete:
-                    Button(role: .destructive) {
-                        onMenuItemTap(menuItem.action)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                case .unknown:
-                    EmptyView()
-                }
+        if menuItems.isEmpty {
+            EmptyView()
+        } else {
+            Button {
+                isPresented = true
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(width: 32, height: 32)
             }
-        })
+            .confirmationDialog("Item Actions", isPresented: $isPresented, titleVisibility: .hidden, actions: {
+                ForEach(menuItems, id: \.action) { menuItem in
+                    switch menuItem.action {
+                    case .delete:
+                        Button(role: .destructive) {
+                            onMenuItemTap(menuItem.action)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    case .unknown:
+                        EmptyView()
+                    }
+                }
+            })
+        }
     }
 }
