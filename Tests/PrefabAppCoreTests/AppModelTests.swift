@@ -5,6 +5,28 @@ import Combine
 import PrefabAppCoreInterface
 
 final class AppModelTests: XCTestCase {
+    func testUserProfile() async throws {
+        let store = AppObjectStore()
+        let model = AppModel(objectStore: store, currentUserID: "1")
+
+        let nilProfileSubject = try await model.userProfile(userID: "1")
+        XCTAssertNil(nilProfileSubject)
+
+        let profileDTO = UserProfileDTO(
+            id: "1",
+            username: "johndoe",
+            displayName: "John Doe",
+            avatarUrl: nil,
+            bio: nil,
+            insertedAt: Date()
+        )
+        _ = try model.upsertProfile(
+            inResponse: APIResponse(data: profileDTO, included: nil)
+        )
+        let userProfileSubject = try await model.userProfile(userID: "1")
+        XCTAssertNotNil(userProfileSubject)
+    }
+
     func testUpsertProfile() throws {
         let store = AppObjectStore()
         let model = AppModel(objectStore: store, currentUserID: "1")

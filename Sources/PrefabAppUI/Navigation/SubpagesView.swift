@@ -111,6 +111,7 @@ struct SubpagesView<Header: View>: View {
                                 alignment: .bottom
                             )
                     }
+                    .tint(AppColor.contentPrimary.color)
                 }
             }
             .padding(.horizontal, 24)

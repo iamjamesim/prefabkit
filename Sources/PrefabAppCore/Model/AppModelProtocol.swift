@@ -4,6 +4,10 @@ import PrefabAppCoreInterface
 
 /// The top-level interface to an app's Model layer.
 protocol AppModelProtocol {
+    /// Returns a user profile given a user ID.
+    /// - Parameter userID: A user ID.
+    func userProfile(userID: String) async throws -> UserProfileSubject?
+
     /// Inserts or updates a user profile object to the store.
     /// - Parameter response: The API response containing the user profile to insert or update.
     /// - Returns: A `CurrentValueSubject` containing the inserted or updated user profile object.

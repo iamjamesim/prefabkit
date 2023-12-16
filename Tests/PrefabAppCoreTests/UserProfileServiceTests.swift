@@ -22,6 +22,26 @@ final class UserProfileServiceTests: XCTestCase {
         super.tearDown()
     }
 
+    func testUserProfile_profileExistsInAppModel() async throws {
+        appModel.userProfileRV = TestData.profileSubject
+        _ = try await userProfileService.userProfile(userID: TestData.profileSubject.id)
+        XCTAssertFalse(apiClient.performCalled)
+        XCTAssertTrue(appModel.userProfileCalled)
+    }
+
+    func testUserProfile_profileDoesNotExistInAppModel() async throws {
+        apiClient.performRV = APIResponse(
+            data: TestData.profileDTO,
+            included: nil
+        )
+        appModel.userProfileRV = nil
+        appModel.upsertProfileRV = TestData.profileSubject
+        _ = try await userProfileService.userProfile(userID: TestData.profileSubject.id)
+        XCTAssertTrue(apiClient.performCalled)
+        XCTAssertEqual(apiClient.performParams?.0, APIOperation.userProfile)
+        XCTAssertTrue(appModel.upsertProfileCalled)
+    }
+
     func testUpdateUsername() async throws {
         apiClient.performRV = APIResponse(
             data: TestData.profileDTO,
